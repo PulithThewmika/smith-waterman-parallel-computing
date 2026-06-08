@@ -1,21 +1,3 @@
-/* ============================================================================
- * sw_common.h  --  Shared helpers for Smith-Waterman implementations
- *
- * Purpose:
- *   A small, deterministic DNA-sequence generator used by ALL four
- *   implementations (serial, OpenMP, MPI, CUDA). Because every version seeds
- *   the SAME xorshift PRNG with the SAME seed, they all build IDENTICAL input
- *   sequences and therefore MUST report the SAME maximum alignment score.
- *   This gives us a trivial correctness check across implementations.
- *
- *   We deliberately avoid the C library rand(), whose output can differ
- *   between toolchains/links (e.g. gcc vs nvcc). A self-contained xorshift64
- *   PRNG removes that risk entirely.
- *
- * Author: Pulith Thewmika (IT23656338)
- * Module: SE3082 Parallel Computing - Assignment 03
- * Note  : Written for this assignment. Algorithm reference cited in report.
- * ==========================================================================*/
 #ifndef SW_COMMON_H
 #define SW_COMMON_H
 
