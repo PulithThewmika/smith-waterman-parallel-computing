@@ -1,31 +1,3 @@
-/* ============================================================================
- * serial_sw.c  --  Serial (single-threaded) Smith-Waterman local alignment
- *
- * This is the BASELINE. Every speedup figure in the report is measured
- * relative to the matrix-fill time printed by this program.
- *
- * What it does:
- *   1. Builds two random DNA sequences of length m and n (deterministic).
- *   2. Fills the (m+1) x (n+1) scoring matrix H using the Smith-Waterman
- *      recurrence, clamping negatives to 0 (local alignment).
- *   3. Reports the maximum score in H and the time taken to fill the matrix.
- *
- * We benchmark ONLY the matrix-fill phase, because that is the O(m*n)
- * compute-bound section we parallelize. Traceback is O(path length) and is
- * not part of the timed region (it is identical across all versions).
- *
- * Smith-Waterman recurrence for cell (i, j), 1-indexed:
- *     H[i][j] = max( 0,
- *                    H[i-1][j-1] + score(a[i-1], b[j-1]),   // diagonal
- *                    H[i-1][j]   + GAP,                      // gap in b
- *                    H[i][j-1]   + GAP )                     // gap in a
- *
- * Build : make           (or: gcc -O2 -o serial_sw serial_sw.c)
- * Run   : ./serial_sw [m] [n] [seed]
- *         e.g. ./serial_sw 4000 4000 12345
- *
- * Author: Pulith Thewmika (IT23656338) - SE3082 Assignment 03
- * ==========================================================================*/
 #define _POSIX_C_SOURCE 199309L   /* expose CLOCK_MONOTONIC / clock_gettime */
 #include <stdio.h>
 #include <stdlib.h>
