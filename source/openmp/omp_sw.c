@@ -1,34 +1,3 @@
-/* ============================================================================
- * omp_sw.c  --  OpenMP parallel Smith-Waterman (TILED anti-diagonal wavefront)
- *
- * PARALLELIZATION STRATEGY: TILED ANTI-DIAGONAL WAVEFRONT
- * -------------------------------------------------------
- * A naive "one cell per task on each anti-diagonal" sweep is correct but slow:
- * it needs (m+n) barriers and accesses memory along strided diagonals (poor
- * cache use). We instead tile the matrix into TS x TS blocks and run the
- * wavefront AT TILE GRANULARITY:
- *
- *   - Tiles on the same tile-diagonal D = ti + tj are independent, so we
- *     parallelise across those tiles with `#pragma omp parallel for`.
- *   - Each tile is computed INTERNALLY in serial, row-major order, which is
- *     cache-friendly and lets the compiler vectorise the inner loop.
- *   - This cuts the number of barriers from (m+n) down to (#tile-rows +
- *     #tile-cols - 1) and gives every thread a big, contiguous chunk of work
- *     -> the synchronisation overhead is amortised and we actually scale.
- *
- * Correctness: when tile (ti,tj) runs, its top, left and top-left neighbour
- * tiles are on EARLIER tile-diagonals and are already complete, so every cell
- * still reads only finished neighbours. Output matches the serial version.
- *
- * LOAD BALANCING: tile-diagonals vary in length, so schedule(dynamic) hands
- * out tiles on demand and keeps all threads busy near the matrix corners.
- *
- * Build : make
- * Run   : OMP_NUM_THREADS=8 ./omp_sw 8000 8000 12345
- *   or   : ./omp_sw 8000 8000 12345 8        (4th arg = thread count)
- *
- * Author: Pulith Thewmika (IT23656338) - SE3082 Assignment 03
- * ==========================================================================*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <omp.h>
@@ -67,10 +36,7 @@ int main(int argc, char **argv) {
     double t0 = omp_get_wtime();
     int max_score = 0;
 
-    /* ONE parallel region for the whole sweep: the thread team is created
-     * once and reused across all tile-diagonals. (Opening a fresh
-     * `parallel for` per diagonal would fork/join hundreds of times and the
-     * overhead would erase the speedup on this fine-grained workload.) */
+   
     #pragma omp parallel
     for (int D = 0; D <= (TR - 1) + (TC - 1); ++D) {
         int ti_lo = (D - (TC - 1) > 0) ? (D - (TC - 1)) : 0;
