@@ -137,10 +137,3 @@ save them in `screenshots/`.
   stream launches enforce the wavefront dependency.
 
 ---
-
-### 8. Academic integrity / AI usage
-
-All code in this repository was written for this assignment. AI assistance
-(Claude) was used during development; the prompts and how output was adapted
-are documented in `AI_USAGE.md`, as required by the assignment brief. The
-Smith–Waterman recurrence reference is cited in the report (IEEE format).
