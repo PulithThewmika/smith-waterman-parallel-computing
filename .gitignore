@@ -1,0 +1,39 @@
+# Compiled binaries
+source/serial/serial_sw
+source/openmp/omp_sw
+source/mpi/mpi_sw
+source/cuda/cuda_sw
+
+# Object files
+*.o
+*.obj
+
+# CUDA compiled files
+*.cubin
+*.ptx
+
+# Build artifacts
+*.exe
+*.out
+*.a
+*.so
+*.dylib
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Editor/IDE files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+
+# Data output (keep structure via data/README.txt)
+data/results.csv
