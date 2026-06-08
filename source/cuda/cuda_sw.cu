@@ -1,34 +1,3 @@
-/* ============================================================================
- * cuda_sw.cu  --  CUDA parallel Smith-Waterman (anti-diagonal wavefront)
- *
- * PARALLELIZATION STRATEGY: ANTI-DIAGONAL WAVEFRONT ON THE GPU
- * -----------------------------------------------------------
- * Identical idea to the OpenMP version, but mapped to thousands of GPU
- * threads. All cells on one anti-diagonal d = i + j are independent, so each
- * is handled by ONE GPU thread. We launch one kernel PER anti-diagonal:
- *
- *      for d = 2 .. m+n:                 // host loop, serial over wavefronts
- *          launch kernel: thread t -> cell (i = i_lo + t, j = d - i)
- *
- * Kernel launches on the default stream execute IN ORDER, so diagonal d-1 is
- * guaranteed complete before diagonal d starts -> the wavefront dependency is
- * satisfied with no explicit barrier between launches.
- *
- * The matrix H lives entirely in GPU global memory for the whole sweep, so we
- * pay the host<->device transfer cost only once (sequences in, max score out).
- *
- * The running maximum is kept on the device with atomicMax, avoiding a
- * separate reduction pass.
- *
- * BENCHMARK KNOB: the threads-per-block (block size) is the 4th CLI argument,
- * so you can sweep 32/64/128/256/512 as the assignment requires.
- *
- * Build : make            (nvcc; set the GPU arch in the Makefile)
- * Run   : ./cuda_sw 4000 4000 12345 256       (256 = threads/block)
- *
- * Author: Pulith Thewmika (IT23656338) - SE3082 Assignment 03
- * Target GPU: NVIDIA GeForce RTX 4060 (Ada, sm_89)
- * ==========================================================================*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda_runtime.h>
@@ -51,13 +20,13 @@
     } while (0)
 
 /* ----------------------------------------------------------------------------
- * Kernel: compute every cell on ONE anti-diagonal.
- *   d        - the anti-diagonal index (i + j)
- *   i_lo     - smallest valid row index on this diagonal
- *   count    - number of cells on this diagonal
- *   n        - sequence length b (row stride is n+1)
- *   d_gmax   - device-side global maximum (updated via atomicMax)
- * --------------------------------------------------------------------------*/
+  Kernel: compute every cell on ONE anti-diagonal.
+    d        - the anti-diagonal index (i + j)
+    i_lo     - smallest valid row index on this diagonal
+    count    - number of cells on this diagonal
+    n        - sequence length b (row stride is n+1)
+    d_gmax   - device-side global maximum (updated via atomicMax)
+   --------------------------------------------------------------------------*/
 __global__ void sw_diagonal_kernel(int *H, const char *a, const char *b,
                                     int n, int d, int i_lo, int count,
                                     int *d_gmax) {
