@@ -1,39 +1,3 @@
-/* ============================================================================
- * mpi_sw.c  --  MPI parallel Smith-Waterman (column-block pipeline)
- *
- * PARALLELIZATION STRATEGY: COLUMN-BLOCK PARTITION + ROW-BLOCK PIPELINE
- * --------------------------------------------------------------------
- * The matrix columns are split into P contiguous blocks, one per MPI rank.
- * Rank r owns global columns [gc0 .. gc1].
- *
- * The Smith-Waterman dependency H[i][j] <- H[i][j-1] crosses the boundary
- * between a rank and its LEFT neighbour exactly once per row: to compute the
- * first column it owns, rank r needs the LAST column of rank r-1 at the same
- * row. We therefore run a software PIPELINE (a "systolic wavefront"):
- *
- *      rank 0 ──last col──► rank 1 ──last col──► rank 2 ─ ... ─► rank P-1
- *
- * To avoid one tiny message per row (huge latency cost), rows are processed in
- * BLOCKS of BR rows: a rank receives BR boundary values, computes BR rows for
- * all of its columns, then forwards BR boundary values to the next rank.
- * While rank r works on row-block k, rank r-1 already works on block k+1, so
- * the ranks overlap -> real speedup once the pipeline is full.
- *
- * Local storage layout (per rank):
- *   H_local has (m+1) rows and (local_w + 1) columns.
- *   - local column 0 is the GHOST column = rank r-1's last owned column
- *     (all zeros for rank 0, the left boundary of the matrix).
- *   - local columns 1..local_w map to global columns gc0..gc1.
- *
- * Correctness: produces the SAME max score as the serial version because the
- * recurrence and the (deterministic) input are identical; only the order of
- * evaluation across ranks changes, and the pipeline respects all dependencies.
- *
- * Build : make            (mpicc)
- * Run   : mpirun -np 4 ./mpi_sw 4000 4000 12345
- *
- * Author: Pulith Thewmika (IT23656338) - SE3082 Assignment 03
- * ==========================================================================*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <mpi.h>
@@ -61,14 +25,14 @@ int main(int argc, char **argv) {
     }
 
     /* ---- Every rank builds the FULL sequences (cheap, O(m+n) memory).
-     * This avoids scattering and keeps indexing identical to the serial code. */
+       This avoids scattering and keeps indexing identical to the serial code. */
     char *a = (char *)malloc((size_t)m + 1);
     char *b = (char *)malloc((size_t)n + 1);
     sw_make_sequence(a, m, seed);
     sw_make_sequence(b, n, seed + 1);
 
     /* ---- Decide this rank's contiguous column range [gc0 .. gc1] (1-indexed).
-     * Columns 1..n are spread as evenly as possible across P ranks. ---- */
+      Columns 1..n are spread as evenly as possible across P ranks. ---- */
     int base = n / P, rem = n % P;
     int gc0 = rank * base + (rank < rem ? rank : rem) + 1;
     int local_w = base + (rank < rem ? 1 : 0);
@@ -81,7 +45,7 @@ int main(int argc, char **argv) {
     if (!H) { fprintf(stderr, "rank %d: calloc failed\n", rank); MPI_Abort(MPI_COMM_WORLD, 1); }
 
     /* Send buffer: one big buffer; each row-block writes a disjoint slice, so
-     * several non-blocking sends can be in flight at once without clobbering. */
+      several non-blocking sends can be in flight at once without clobbering. */
     int *sendbuf = (int *)malloc(((size_t)m + 1) * sizeof(int));
     int num_blocks = (m + BR - 1) / BR;
     MPI_Request *reqs = (MPI_Request *)malloc((size_t)num_blocks * sizeof(MPI_Request));
